@@ -3,6 +3,7 @@
 #include <X11/xpm.h>
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
 
 #include "tools.xpm"
 #include "xmis.c"
