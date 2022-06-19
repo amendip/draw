@@ -9,7 +9,7 @@
 
 Display* d;
 XSetWindowAttributes at, bat;
-Window win, topbar, toolbox, scolor, colorbox, vp, cv;
+Window win, topbar, toolbox, scolor, colorbox, vp, cv, options;
 XSizeHints wmsiz;
 XWMHints wmh;
 XTextProperty winn, iconn;
@@ -29,7 +29,7 @@ char* bl[BC]={"File", "Edit", "View", "Image", "Colors", "Help"};
 Window white[WK];
 Window cbtns[CBC];
 
-Pixmap pattern, clipper;
+Pixmap pattern, clipper, airbp, airbc, otp, otc;
 XpmAttributes xpmat;
 
 Pixmap stipple;
@@ -109,6 +109,9 @@ bat.border_pixel=BlackPixel(d, sn);
 	cv=XCreateWindow(d, vp, 4, 4, cvw, cvh, 0, DefaultDepth(d, sn), InputOutput, DefaultVisual(d, sn), valuemask, &bat);
 
 	bat.event_mask=ButtonPressMask|ExposureMask;
+	//options
+	options=XCreateWindow(d, toolbox, 5, WK*WKW/2+5, 40, 64, 1, DefaultDepth(d, sn), InputOutput, DefaultVisual(d, sn), valuemask, &bat);
+
 	//tool buttons
 	bat.background_pixel=0xc0c0c0;
 	for(int i=0;i<WK;i++){
@@ -132,6 +135,8 @@ btns[i]=XCreateWindow(d, topbar, i*45, 0, 45, 20, 0, DefaultDepth(d, sn), InputO
 xpmat.color_key = XPM_COLOR;
 xpmat.valuemask = XpmColorKey | XpmColorTable ;
 XpmCreatePixmapFromData(d, win, tools, &pattern, &clipper, &xpmat);
+XpmCreatePixmapFromData(d, win, airb, &airbp, &airbc, &xpmat);
+XpmCreatePixmapFromData(d, win, options_transparency, &otp, &otc, &xpmat);
 xpmgc = XCreateGC(d, win, 0, NULL);
 XSetForeground(d, xpmgc, WhitePixel(d, sn));
 XSetBackground(d, xpmgc, BlackPixel(d, sn));
@@ -153,6 +158,7 @@ valuemask=CWBackPixel|CWBorderPixel|CWEventMask;
 XMapWindow(d, win);
 XMapWindow(d, topbar);
 XMapWindow(d, toolbox);
+XMapWindow(d, options);
 XMapWindow(d, colorbox);
 XMapWindow(d, scolor);
 XMapWindow(d, vp);
@@ -166,6 +172,8 @@ XMapWindow(d, cbtns[i]);
 
 
 }
+
+//redraw functions
 
 void redraw_scolor(){
 	XSetFillStyle(d, gc, FillStippled);
@@ -187,6 +195,7 @@ int redraw_toolbtn(Window w, int i){
 		XFillRectangle(d, w, gc, 0, 0, WKW, WKW);
 		XSetFillStyle(d, gc, FillSolid);
 	}
+	XSetClipMask(d, xpmgc, clipper);
 	XSetClipOrigin(d, xpmgc, 4-i*16, 4);
 	XCopyArea(d, pattern, w, xpmgc, i*16, 0, 16, 16, 4, 4);
 }
@@ -211,10 +220,159 @@ int redraw_menubtns(Window w){
 	return 0;
 }
 
-// functions for drawing
-
 // conf variables
-int filltype=1, linethick=1, spraysize=0, bgtransp=0, erasersize=0, zoomby=1, brushtype=9;
+int filltype=1, linethick=1, spraysize=2, bgtransp=0, erasersize=0, zoomby=0, brushtype=9;
+
+void redraw_options(){
+	int bs;
+	int zooms[4]={1,2,6,8};
+	char timez[3]="1x";
+	XClearWindow(d, options);
+	switch(tool){
+		case 0: case 1:
+		for(int i=0;i<2;i++){
+			if(i==bgtransp){
+				XSetForeground(d, gc, 0x000080);
+				XFillRectangle(d, options, gc, 0, 4+i*30, 40, 26);
+			}
+			XSetClipMask(d, xpmgc, otc);
+			XSetClipOrigin(d, xpmgc, 4, 6+i*8);
+			XCopyArea(d, otp, options, xpmgc, 0, i*22, 35, 23, 4, 6+i*30);
+			//XSetForeground(d, gc, 0x000000);
+			//XFillRectangle(d, options, gc, 20-i-2, 7+14*i, 4+i*2, 4+i*2);
+		}
+		break;
+		case 2:
+		for(int i=0;i<4;i++){
+			if(i==erasersize){
+				XSetForeground(d, gc, 0x000080);
+				XFillRectangle(d, options, gc, 0, i*16, 40, 16);
+				XSetForeground(d, gc, 0xffffff);
+				XFillRectangle(d, options, gc, 20-i-2, 7+14*i, 4+i*2, 4+i*2);
+			}else{
+				XSetForeground(d, gc, 0x000000);
+				XFillRectangle(d, options, gc, 20-i-2, 7+14*i, 4+i*2, 4+i*2);
+			}
+		}
+		break;
+		case 5:
+		for(int i=0;i<4;i++){
+			timez[0]='0'+zooms[i];
+			if(i==zoomby){
+				XSetForeground(d, gc, 0x000080);
+				XFillRectangle(d, options, gc, 0, i*16, 40, 16);
+				XSetBackground(d, gc, 0x000080);
+				XSetForeground(d, gc, 0xffffff);
+				XDrawImageString(d, options, gc, 8, 13+15*i, timez, 2);
+				XFillRectangle(d, options, gc, 30-zooms[i]/2, 7+15*i, zooms[i], zooms[i]);
+			}else{
+				XSetBackground(d, gc, 0xc0c0c0);
+				XSetForeground(d, gc, 0x000000);
+				XDrawImageString(d, options, gc, 8, 13+15*i, timez, 2);
+				XFillRectangle(d, options, gc, 30-zooms[i]/2, 7+15*i, zooms[i], zooms[i]);
+			}
+		}
+		break;
+		case 7:
+		for(int i=0;i<12;i++){
+			bs=2+3*(2-i%3);
+			if(i==brushtype){
+				XSetForeground(d, gc, 0x000080);
+				XFillRectangle(d, options, gc, 1+(i%3)*13, 2+(i/3)*16, 12, 12);
+				XSetForeground(d, gc, 0xffffff);
+			}else XSetForeground(d, gc, 0x000000);
+			switch(i/3){
+				case 0:
+					XFillArc(d, options, gc, 3+(i%3)*13, 4+(i%3)*1.5, bs, bs, 0, 23040);
+				break;
+				case 1:
+					XFillRectangle(d, options, gc, 3+(i%3)*13, 20+(i%3)*1.5, bs, bs);
+				break;
+				case 2:
+					XDrawLine(d, options, gc, 3+(i%3)*13, 36+(i%3)*1.5+bs, 3+(i%3)*13+bs, 36+(i%3)*1.5);
+				break;
+				case 3:
+					XDrawLine(d, options, gc, 3+(i%3)*13, 52+(i%3)*1.5, 3+(i%3)*13+bs, 52+(i%3)*1.5+bs);
+				break;
+			}
+		}
+		break;
+		case 8:
+		XSetClipMask(d, xpmgc, airbc);
+		for(int i=0;i<3;i++){
+			XSetClipOrigin(d, xpmgc, 3+(i%2)*20+(i/2)*5-i*16, 6+(i/2)*30);
+			if(i==spraysize){
+				XSetForeground(d, gc, 0x000080);
+				XFillRectangle(d, options, gc, 3+(i%2)*20+(i/2)*5, 6+(i/2)*30, 16+(i/2)*8, 23);
+				XSetFunction(d, xpmgc, GXcopyInverted);
+				XCopyArea(d, airbp, options, xpmgc, i*16, 0, 16+(i/2)*8, 23, 3+(i%2)*20+(i/2)*5, 6+(i/2)*30);
+				XSetFunction(d, xpmgc, GXcopy);
+			}else{
+				XCopyArea(d, airbp, options, xpmgc, i*16, 0, 16+(i/2)*8, 23, 3+(i%2)*20+(i/2)*5, 6+(i/2)*30);
+			}
+		}
+		break;
+		case 12: case 13: case 14: case 15:
+		for(int i=0;i<3;i++){
+			if(i==filltype){
+				XSetForeground(d, gc, 0x000080);
+				XFillRectangle(d, options, gc, 0, i*21, 40, 21);
+				if(i>0){
+					XSetForeground(d, gc, 0x808080);
+					XFillRectangle(d, options, gc, 7, 7+21*i, 26, 9);
+				}
+				if(i<2){
+					XSetForeground(d, gc, 0xffffff);
+					XDrawRectangle(d, options, gc, 7, 7+21*i, 26, 9);
+				}
+			}else{
+				if(i>0){
+					XSetForeground(d, gc, 0x808080);
+					XFillRectangle(d, options, gc, 7, 7+21*i, 26, 9);
+				}
+				if(i<2){
+					XSetForeground(d, gc, 0x000000);
+					XDrawRectangle(d, options, gc, 7, 7+21*i, 26, 9);
+				}
+			}
+		}
+		break;
+	}
+	//XSetClipOrigin(d, xpmgc, 4-i*16, 4);
+	//XCopyArea(d, pattern, w, xpmgc, i*16, 0, 16, 16, 4, 4);
+}
+
+// tool option picking
+void optionclick(int x, int y){
+	int bs;
+	int zooms[4]={1,2,6,8};
+	char timez[3]="1x";
+	XClearWindow(d, options);
+	switch(tool){
+		case 0: case 1:
+		bgtransp=y/32;
+		break;
+		case 2:
+		erasersize=y/16;
+		break;
+		case 5:
+		zoomby=y/16;
+		break;
+		case 7:
+		brushtype=(y/16)*3+x/13;
+		break;
+		case 8:
+		if(y<32) spraysize=(x/20);
+		else spraysize=2;
+		break;
+		case 12: case 13: case 14: case 15:
+		filltype=y/21;
+		break;
+	}
+	redraw_options();
+}
+
+// functions for drawing
 
 // auxiliary functions
 void nop(int x, int y){
@@ -344,18 +502,18 @@ void mbrush(int x, int y){
 	brushx=x; brushy=y;
 }
 
-// Brush functions
+// Eraser functions
 int ersrx, ersry;
 void ersr(int x, int y){
-	int ersrsize=2+2*erasersize;
-	XSetForeground(d, gc, fgc);
+	int ersrsize=4+2*erasersize;
+	XSetForeground(d, gc, bgc);
 
 	XFillRectangle(d, cv, gc, x-ersrsize/2, y-ersrsize/2, ersrsize, ersrsize);
 	ersrx=x; ersry=y;
 }
 
 void mersr(int x, int y){
-	int ersrsize=2+3*erasersize;
+	int ersrsize=4+2*erasersize;
 	int diag=1-2*((x>=ersrx && y>=ersry) || (x<ersrx && y<ersry));
 	int s=ersrsize/2;
 	XPoint ersrcon[4];
@@ -462,6 +620,92 @@ void rline(int x, int y){
 	XCopyArea(d, cvpm, cv, gc, rllinex, rlliney, mod(x-linex), mod(y-liney), rllinex, rlliney);
 	XDrawLine(d, cv, gc, linex, liney, x, y);
 	XDrawLine(d, cvpm, gc, linex, liney, x, y);
+}
+
+// Curve functions
+#define N_SEG 30
+void cubic_bezier(
+Window w,
+int x1, int y1,
+int x2, int y2,
+int x3, int y3,
+int x4, int y4){
+	double pts[N_SEG+1][2], t, omt, a, b, c, e, x, y;
+	for(int i=0;i<=N_SEG;i++){
+		t=(double)i/(double)N_SEG;
+		omt=1.0-t;
+
+		a=omt*omt*omt;
+		b=3.0*t*omt*omt;
+		c=3.0*t*t*omt;
+		e=t*t*t;
+
+		x=a*x1+b*x2+c*x3+e*x4;
+		y=a*y1+b*y2+c*y3+e*y4;
+		pts[i][0]=x;
+		pts[i][1]=y;
+	}
+	
+	for(int i=0;i<N_SEG;i++){
+		XDrawLine(d, w, gc, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1]);
+	}
+}
+
+int curvex, curvey, prevcx, prevcy, crvh1x, crvh1y, crvh2x, crvh2y, crvstate=0;
+void curve(int x, int y){
+	switch(crvstate){
+	case 0:
+	prevcx=curvex=x; prevcy=curvey=y;
+	break;
+	case 1:
+	crvh2x=prevcx; crvh2y=prevcy;
+	crvh1x=x; crvh1y=y;
+	break;
+	case 2:
+	default:
+	crvh2x=x; crvh2y=y;
+	break;
+	}
+}
+
+void mcurve(int x, int y){
+	int rlcurvex=(curvex<=prevcx)*curvex+(curvex>prevcx)*prevcx, rlcurvey=(curvey<=prevcy)*curvey+(curvey>prevcy)*prevcy;
+	int crvhx=(crvh1x<=crvh2x)*crvh1x+(crvh1x>crvh2x)*crvh2x, crvhy=(crvh1y<=crvh2y)*crvh1y+(crvh1y>crvh2y)*crvh2y;
+	int cbbx=(rlcurvex<=crvhx)*rlcurvex+(rlcurvex>crvhx)*crvhx, cbby=(rlcurvey<=crvhy)*rlcurvey+(rlcurvey>crvhy)*crvhy;
+	int cbbw, cbbh;
+	cbbw=(curvex<=prevcx)*prevcx+(curvex>prevcx)*curvex, cbbh=(curvey<=prevcy)*prevcy+(curvey>prevcy)*curvey;
+	crvhx=(crvh1x<=crvh2x)*crvh2x+(crvh1x>crvh2x)*crvh1x, crvhy=(crvh1y<=crvh2y)*crvh2y+(crvh1y>crvh2y)*crvh1y;
+	cbbw=(cbbw<=crvhx)*crvhx+(cbbw>crvhx)*cbbw-cbbx+1, cbbh=(cbbh<=crvhy)*crvhy+(cbbh>crvhy)*cbbh-cbby+1;
+	XSetForeground(d, gc, fgc);
+	switch(crvstate){
+	case 0:
+	XCopyArea(d, cvpm, cv, gc, rlcurvex, rlcurvey, mod(prevcx-curvex)+1, mod(prevcy-curvey)+1, rlcurvex, rlcurvey);
+	XDrawLine(d, cv, gc, curvex, curvey, x, y);
+	prevcx=x; prevcy=y;
+	break;
+	case 1:
+	crvh1x=x; crvh1y=y;
+	XCopyArea(d, cvpm, cv, gc, cbbx, cbby, cbbw, cbbh, cbbx, cbby);
+	cubic_bezier(cv, curvex, curvey, crvh1x, crvh1y, crvh2x, crvh2y, prevcx, prevcy);
+	break;
+	case 2:
+	default:
+	crvh2x=x; crvh2y=y;
+	XCopyArea(d, cvpm, cv, gc, cbbx, cbby, cbbw, cbbh, cbbx, cbby);
+	cubic_bezier(cv, curvex, curvey, crvh1x, crvh1y, crvh2x, crvh2y, prevcx, prevcy);
+	break;
+	}
+}
+
+void rcurve(int x, int y){
+	int rlcurvex=(curvex<x)*curvex+(curvex>x)*x, rlcurvey=(curvey<y)*curvey+(curvey>y)*y;
+	XSetForeground(d, gc, fgc);
+	if(crvstate==2){
+		crvh2x=x; crvh2y=y;
+		cubic_bezier(cv, curvex, curvey, crvh1x, crvh1y, crvh2x, crvh2y, prevcx, prevcy);
+		cubic_bezier(cvpm, curvex, curvey, crvh1x, crvh1y, crvh2x, crvh2y, prevcx, prevcy);
+	}
+	crvstate=(crvstate+1)%3;
 }
 
 // Polyline functions
@@ -610,9 +854,9 @@ void relps(int x, int y){
 	}
 }
 
-void (*pdrawfs[WK])(int x, int y)={pen,pen,pen,fill,pen,pen,pen,brush,pen,pen,line,pen,rect,pline,elps,pen};
-void (*mdrawfs[WK])(int x, int y)={pen,pen,pen,nop,pen,pen,mpen,mbrush,pen,pen,mline,pen,mrect,mpline,melps,pen};
-void (*rdrawfs[WK])(int x, int y)={nop,nop,nop,nop,nop,nop,nop,nop,nop,nop,rline,nop,rrect,rpline,relps,nop};
+void (*pdrawfs[WK])(int x, int y)={pen,pen,ersr,fill,pen,pen,pen,brush,pen,pen,line,curve,rect,pline,elps,pen};
+void (*mdrawfs[WK])(int x, int y)={pen,pen,mersr,nop,pen,pen,mpen,mbrush,pen,pen,mline,mcurve,mrect,mpline,melps,pen};
+void (*rdrawfs[WK])(int x, int y)={nop,nop,nop,nop,nop,nop,nop,nop,nop,nop,rline,rcurve,rrect,rpline,relps,nop};
 
 void xclose(){
 XUnmapWindow(d, win);

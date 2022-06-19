@@ -23,6 +23,8 @@ case Expose:
 		XCopyArea(d, cvpm, cv, gc, 0, 0, cvw, cvh, 0, 0);
 	}else if(xev.xexpose.window==scolor){
 		redraw_scolor();
+	}else if(xev.xexpose.window==options){
+		redraw_options();
 	}else{
 		if(redraw_toolbtns(xev.xexpose.window));
 		else if(redraw_menubtns(xev.xexpose.window));
@@ -39,13 +41,22 @@ case ButtonPress:
 			bgc^=fgc;
 			fgc^=bgc;
 			redraw_scolor();
+		}else if(xev.xbutton.window==options){
+			optionclick(xev.xbutton.x, xev.xbutton.y);
 		}else{
 			for(int i=0;i<WK;i++)
 			if(xev.xbutton.window==white[i]){
-				prevtool=tool;
-				tool=i;
+				if(tool==i && (i==4 || i==5)){
+					tool^=prevtool;
+					prevtool^=tool;
+					tool^=prevtool;
+				}else{
+					prevtool=tool;
+					tool=i;
+				}
 				redraw_toolbtn(white[prevtool], prevtool);
 				redraw_toolbtn(white[tool], tool);
+				redraw_options();
 				goto bpress_end;
 			}
 

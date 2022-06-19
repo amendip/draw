@@ -6,6 +6,8 @@
 #include <stdio.h>
 
 #include "tools.xpm"
+#include "airb.xpm"
+#include "options-transparency.xpm"
 #include "xmis.c"
 #include "xevl.c"
 
