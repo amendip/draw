@@ -100,7 +100,7 @@ case KeyPress:
 	//printf("character: %c\n", c);
 	f=0;
 	switch(c){
-	case 'q': break;
+	case 's': save(); break;
 	case 'w': break;
 	default:
 	}

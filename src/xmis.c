@@ -400,6 +400,15 @@ void mpen(int x, int y){
 	penx=x; peny=y;
 }
 
+// Airbrush functions
+int abx, aby;
+void ab(int x, int y){
+	XSetForeground(d, gc, fgc);
+	XDrawPoint(d, cv, gc, x, y);
+	XDrawPoint(d, cvpm, gc, x, y);
+	penx=x; peny=y;
+}
+
 // Brush functions
 int brushx, brushy;
 void brush(int x, int y){
@@ -857,6 +866,36 @@ void relps(int x, int y){
 void (*pdrawfs[WK])(int x, int y)={pen,pen,ersr,fill,pen,pen,pen,brush,pen,pen,line,curve,rect,pline,elps,pen};
 void (*mdrawfs[WK])(int x, int y)={pen,pen,mersr,nop,pen,pen,mpen,mbrush,pen,pen,mline,mcurve,mrect,mpline,melps,pen};
 void (*rdrawfs[WK])(int x, int y)={nop,nop,nop,nop,nop,nop,nop,nop,nop,nop,rline,rcurve,rrect,rpline,relps,nop};
+
+// Export function
+void save(){
+XImage *pic=XGetImage(d, cvpm, 0, 0, cvw, cvh, AllPlanes, ZPixmap);
+char cch[CBC+1]="abcdefghijklmnopqrstuvwxyz123";
+FILE *f=fopen("image.xpm", "w");
+unsigned long pixel;
+fprintf(f, "/* XPM */\nstatic char * image_data[] = {\n");
+fprintf(f, "\"%d %d 28 1\",\n", cvw, cvh);
+for(int i=0;i<CBC;i++){
+fprintf(f, "\"%c c #%06lx\",\n", cch[i], palette[i]);
+}
+for(int y=0;y<cvh;y++){
+fprintf(f, "\"");
+for(int x=0;x<cvw;x++){
+pixel=XGetPixel(pic, x, y);
+for(int i=0;i<CBC;i++){
+if(pixel==palette[i]){
+fprintf(f, "%c", cch[i]);
+}
+}
+}
+fprintf(f, "\"");
+if(y!=cvh-1) fprintf(f, ",");
+fprintf(f, "\n");
+}
+fprintf(f, "};\n");
+fclose(f);
+XDestroyImage(pic);
+}
 
 void xclose(){
 XUnmapWindow(d, win);
